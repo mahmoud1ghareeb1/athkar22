@@ -19,7 +19,7 @@ This application is a PWA, which means:
 
 ## Running Locally
 
-1.  Clone this repository.
+1.  Place the project files in a directory on your local machine.
 2.  Serve the root directory using a simple local web server. For example, using Python:
     ```bash
     python -m http.server
