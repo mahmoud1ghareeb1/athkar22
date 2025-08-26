@@ -55,7 +55,7 @@ const urlsToCache = [
   './hooks/useCustomizableAthkar.ts',
   './data/daily-content.ts',
   './data/asma-ul-husna.ts',
-  './data/quran-with-pages.ts',
+  './data/quran-pages.ts',
   './data/feelings-data.ts',
   './data/quranic-duas.ts',
   './data/prophets-duas.ts',

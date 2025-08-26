@@ -1,131 +1,164 @@
-import type { QuranPageData, Ayah } from '../types';
-import { surahList } from '../constants';
+import type { QuranPageData, Ayah, Surah } from '../types';
+import { quranDataByPage } from '../data/quran-pages';
+import { surahList, juzs } from '../constants';
 
-const API_BASE_URL = 'https://api.alquran.cloud/v1';
+// --- Pre-computation for faster lookups ---
 
-// Helper to find surah metadata locally
-const getSurahMeta = (surahNumber: number) => {
-    return surahList.find(s => s.number === surahNumber) || { name: 'Unknown', englishName: 'Unknown' };
+const surahStartAyahMap = new Map<number, number>();
+const surahDataMap = new Map<string, Surah>();
+let cumulativeAyahs = 0;
+for (const surah of surahList) {
+    surahStartAyahMap.set(surah.number, cumulativeAyahs + 1);
+    surahDataMap.set(surah.name, surah);
+    cumulativeAyahs += surah.numberOfAyahs;
 }
 
-// Transforms a single Ayah API response
-const transformAyahData = (apiData: any): Ayah => {
-    const ayah = apiData.data;
-    const surahMeta = getSurahMeta(ayah.surah.number);
-    return {
-        number: ayah.number,
-        numberInSurah: ayah.numberInSurah,
-        text: ayah.text,
-        juz: ayah.juz,
-        page: ayah.page,
-        surah: {
-            number: ayah.surah.number,
-            name: surahMeta.name,
-            englishName: surahMeta.englishName,
-        },
-    };
+const getOverallAyahNumber = (surahNumber: number, numberInSurah: number): number => {
+    return (surahStartAyahMap.get(surahNumber) ?? 0) + numberInSurah - 1;
 };
 
-// Transforms API response for a page into our app's QuranPageData format
-const transformPageData = (apiData: any): QuranPageData => {
-    const ayahs = apiData.data.ayahs.map((ayah: any): Omit<Ayah, 'surah'> & { surah: { number: number }} => {
-        return {
-            number: ayah.number,
-            numberInSurah: ayah.numberInSurah,
-            text: ayah.text,
-            juz: ayah.juz,
-            page: ayah.page,
-            surah: {
-                number: ayah.surah.number,
-            },
-        };
-    }).map((ayah: Omit<Ayah, 'surah'> & { surah: { number: number }}) => {
-        const surahMeta = getSurahMeta(ayah.surah.number);
-        return {
-            ...ayah,
-            surah: {
-                ...ayah.surah,
-                name: surahMeta.name,
-                englishName: surahMeta.englishName,
+const getJuzFromPage = (pageNumber: number): number => {
+    for (let i = juzs.length - 1; i >= 0; i--) {
+        if (pageNumber >= juzs[i].startingPage) {
+            return juzs[i].id;
+        }
+    }
+    return 1; // Default to Juz 1
+};
+
+
+// Rewritten getPage function to use local data
+export const getPage = async (pageNumber: number): Promise<QuranPageData> => {
+    return new Promise((resolve, reject) => {
+        const pageData = quranDataByPage.find(p => p.page_index === pageNumber);
+
+        if (!pageData) {
+            // To allow the user to add more pages later without getting an error.
+            // reject(new Error(`Page ${pageNumber} not found in local data.`));
+            console.warn(`Page ${pageNumber} not found in local data. Displaying empty page.`);
+            resolve({ pageNumber, ayahs: [] });
+            return;
+        }
+
+        const ayahs: Ayah[] = [];
+        const juz = getJuzFromPage(pageNumber);
+
+        for (const surahName in pageData.verses_by_sura) {
+            const surahMeta = surahDataMap.get(surahName);
+            if (!surahMeta) continue;
+
+            const verses = pageData.verses_by_sura[surahName];
+            for (const verse of verses) {
+                // Skip Bismillah verses (index 0), as they are handled by SurahHeader component
+                // Except for Al-Fatiha where it is the first verse (index 1)
+                if (verse.index === 0) {
+                    continue;
+                }
+                
+                const numberInSurah = verse.index;
+                const overallNumber = getOverallAyahNumber(surahMeta.number, numberInSurah);
+                
+                ayahs.push({
+                    number: overallNumber,
+                    numberInSurah: numberInSurah,
+                    text: verse.text,
+                    juz: juz,
+                    page: pageNumber,
+                    surah: {
+                        number: surahMeta.number,
+                        name: surahMeta.name,
+                        englishName: surahMeta.englishName,
+                    },
+                });
             }
         }
-    });
-    
-    // Sort ayahs by their overall number in the Quran to ensure correct order
-    ayahs.sort((a: Ayah, b: Ayah) => a.number - b.number);
+        
+        ayahs.sort((a, b) => a.number - b.number);
 
-    return {
-        pageNumber: apiData.data.number,
-        ayahs,
-    };
-};
-
-export const getPage = async (pageNumber: number): Promise<QuranPageData> => {
-    const response = await fetch(`${API_BASE_URL}/page/${pageNumber}/quran-uthmani`);
-    if (!response.ok) {
-        throw new Error('Network response was not ok');
-    }
-    const data = await response.json();
-    if (data.code !== 200) {
-        throw new Error(data.status);
-    }
-    return transformPageData(data);
-};
-
-
-export const getAyah = async (ayahNumber: number): Promise<Ayah> => {
-    const response = await fetch(`${API_BASE_URL}/ayah/${ayahNumber}/quran-uthmani`);
-     if (!response.ok) {
-        throw new Error('Network response was not ok');
-    }
-    const data = await response.json();
-    if (data.code !== 200) {
-        throw new Error(data.status);
-    }
-    return transformAyahData(data);
-}
-
-
-// Transforms search results into our app's Ayah array format
-// Fetches the Uthmani text for each match to ensure correct display
-const transformSearchData = async (apiData: any): Promise<Ayah[]> => {
-    const matches = apiData.data.matches.slice(0, 100); // Limit to 100 results
-    const ayahs: Ayah[] = [];
-
-    for (const match of matches) {
-        const surahMeta = getSurahMeta(match.surah.number);
-        // The API gives us the simple text, but we want to display the Uthmani text.
-        // We can fetch the correct text using the ayah number.
-        // However, to avoid many API calls, we will use the text from the search result for display in the list,
-        // and the full reader will show the proper Uthmani text.
-        ayahs.push({
-            number: match.number,
-            numberInSurah: match.numberInSurah,
-            text: match.text, // This is the simplified text from the search
-            juz: match.juz,
-            page: match.page,
-            surah: {
-                number: match.surah.number,
-                name: surahMeta.name,
-                englishName: surahMeta.englishName,
-            },
+        resolve({
+            pageNumber: pageNumber,
+            ayahs,
         });
-    }
-    return ayahs;
+    });
 };
 
+// Rewritten searchQuran function to use local data
 export const searchQuran = async (term: string): Promise<Ayah[]> => {
-    // We search using a "simple" edition which ignores most diacritics and uses standard characters
-    // This makes matching much more reliable for user input.
-    const response = await fetch(`${API_BASE_URL}/search/${encodeURIComponent(term)}/all/quran-simple`);
-    if (!response.ok) {
-        throw new Error('Network response was not ok');
-    }
-    const data = await response.json();
-    if (data.code !== 200 || data.data.count === 0) {
-        return [];
-    }
-    // Rely solely on the API's search capabilities with the 'quran-simple' edition.
-    // The previous client-side filter was removed as it was likely causing data inconsistencies.
-    return transformSearchData(data);
+    return new Promise((resolve) => {
+        if (!term) {
+            resolve([]);
+            return;
+        }
+        
+        const results: Ayah[] = [];
+        const normalizedTerm = term.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[\u0622\u0623\u0625]/g, "ا").replace(/ة/g, "ه");
+        const regex = new RegExp(normalizedTerm, "i");
+
+        quranDataByPage.forEach(pageData => {
+            const juz = getJuzFromPage(pageData.page_index);
+            for (const surahName in pageData.verses_by_sura) {
+                const surahMeta = surahDataMap.get(surahName);
+                if (!surahMeta) continue;
+
+                const verses = pageData.verses_by_sura[surahName];
+                for (const verse of verses) {
+                    const normalizedText = verse.text.toLowerCase().replace(/[\u0622\u0623\u0625]/g, "ا").replace(/ة/g, "ه");
+
+                    if (regex.test(normalizedText)) {
+                        const numberInSurah = verse.index;
+                        const overallNumber = getOverallAyahNumber(surahMeta.number, numberInSurah);
+                        results.push({
+                            number: overallNumber,
+                            numberInSurah: numberInSurah,
+                            text: verse.text,
+                            juz: juz,
+                            page: pageData.page_index,
+                            surah: {
+                                number: surahMeta.number,
+                                name: surahMeta.name,
+                                englishName: surahMeta.englishName,
+                            },
+                        });
+                    }
+                }
+            }
+        });
+        
+        resolve(results);
+    });
 };
+
+
+// Rewritten getAyah function to use local data
+export const getAyah = async (ayahNumber: number): Promise<Ayah> => {
+     return new Promise((resolve, reject) => {
+        for (const pageData of quranDataByPage) {
+            const juz = getJuzFromPage(pageData.page_index);
+            for (const surahName in pageData.verses_by_sura) {
+                const surahMeta = surahDataMap.get(surahName);
+                if (!surahMeta) continue;
+
+                for (const verse of pageData.verses_by_sura[surahName]) {
+                    const numberInSurah = verse.index;
+                    const overallNumber = getOverallAyahNumber(surahMeta.number, numberInSurah);
+                    if (overallNumber === ayahNumber) {
+                        resolve({
+                            number: overallNumber,
+                            numberInSurah: numberInSurah,
+                            text: verse.text,
+                            juz: juz,
+                            page: pageData.page_index,
+                            surah: {
+                                number: surahMeta.number,
+                                name: surahMeta.name,
+                                englishName: surahMeta.englishName,
+                            },
+                        });
+                        return;
+                    }
+                }
+            }
+        }
+        reject(new Error(`Ayah ${ayahNumber} not found in local data.`));
+    });
+}
