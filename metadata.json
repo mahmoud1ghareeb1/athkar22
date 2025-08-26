@@ -1,0 +1,7 @@
+{
+  "name": "Athkari - Islamic App",
+  "description": "A comprehensive Islamic application featuring the Holy Quran, Athkar (supplications), an electronic Masbaha (Tasbeeh counter), and other tools to assist in daily worship.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
