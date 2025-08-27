@@ -151,6 +151,14 @@ export interface ProphetDuas {
   duas: Zikr[];
 }
 
+export interface Tafsir {
+  text: string;
+}
+
+export type TafsirData = {
+  [key: string]: Tafsir; // key is "surah:ayah"
+}
+
 export type Overlay = 
   | { name: 'asmaulhusna' }
   | { name: 'settings' }

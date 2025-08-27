@@ -1,6 +1,7 @@
-import type { QuranPageData, Ayah, Surah } from '../types';
+import type { QuranPageData, Ayah, Surah, Tafsir } from '../types';
 import { quranDataByPage } from '../data/quran-pages';
 import { surahList, juzs } from '../constants';
+import { tafsirIbnKathir } from '../data/tafsir-ibn-kathir';
 
 // --- Pre-computation for faster lookups ---
 
@@ -162,3 +163,36 @@ export const getAyah = async (ayahNumber: number): Promise<Ayah> => {
         reject(new Error(`Ayah ${ayahNumber} not found in local data.`));
     });
 }
+
+// New helper function to find the page for a given Surah and Ayah number
+export const findPageForSurahAyah = (surahNumber: number, ayahInSurah: number): { page: number; ayahNumberOverall: number } | null => {
+    const surahInfo = surahList.find(s => s.number === surahNumber);
+    if (!surahInfo || ayahInSurah > surahInfo.numberOfAyahs || ayahInSurah < 1) {
+        return null; // Invalid input
+    }
+    
+    const ayahNumberOverall = getOverallAyahNumber(surahNumber, ayahInSurah);
+
+    for (const page of quranDataByPage) {
+        const versesForSurah = page.verses_by_sura[surahInfo.name];
+        if (versesForSurah) {
+            for (const verse of versesForSurah) {
+                if (verse.index === ayahInSurah) {
+                    return { page: page.page_index, ayahNumberOverall };
+                }
+            }
+        }
+    }
+    
+    // Fallback if not found in the initial pages (should be rare)
+    // We can estimate based on starting page, but let's stick to exact search for now.
+    return null;
+};
+
+export const getTafsir = async (surahNumber: number, ayahNumberInSurah: number): Promise<Tafsir | null> => {
+    return new Promise((resolve) => {
+        const key = `${surahNumber}:${ayahNumberInSurah}`;
+        const tafsir = tafsirIbnKathir[key];
+        resolve(tafsir || null);
+    });
+};

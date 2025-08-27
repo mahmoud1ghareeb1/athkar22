@@ -2,9 +2,9 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { surahList, juzs, khatmaGoals } from '../constants';
-import { getPage as fetchPageAPI, searchQuran as searchQuranAPI } from '../services/quranApi';
+import { getPage as fetchPageAPI, searchQuran as searchQuranAPI, findPageForSurahAyah } from '../services/quranApi';
 import type { Surah, Ayah, QuranPageData, Reciter, KhatmaGoal } from '../types';
-import { SearchIcon, PlayIcon, PauseIcon, ChevronRightIcon, ArrowLeftIcon as ArrowBackIcon, CheckIcon } from '../components/Icons';
+import { SearchIcon, PlayIcon, PauseIcon, ChevronRightIcon, ArrowLeftIcon as ArrowBackIcon, CheckIcon, MapPinIcon } from '../components/Icons';
 import Header from '../components/Header';
 import { useBookmarks } from '../hooks/useBookmarks';
 import AyahActionMenu from '../components/AyahActionMenu';
@@ -16,6 +16,8 @@ import { useShare } from '../hooks/useShare';
 import { useKhatma } from '../hooks/useKhatma';
 import CompletionModal from '../components/CompletionModal';
 import AudioPlayer from '../components/AudioPlayer';
+import GoToModal from '../components/GoToModal';
+import TafsirModal from '../components/TafsirModal';
 
 // --- Quran Reader Page Component ---
 interface QuranReaderPageProps {
@@ -39,7 +41,7 @@ const QuranReaderPage: React.FC<QuranReaderPageProps> = ({ initialPage, highligh
     const [selectedAyah, setSelectedAyah] = useState<Ayah | null>(null);
     const [actionMenuAyah, setActionMenuAyah] = useState<Ayah | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isTafsirOpen, setIsTafsirOpen] = useState(false);
+    const [tafsirAyah, setTafsirAyah] = useState<Ayah | null>(null);
     
     const [audioPlayerConfig, setAudioPlayerConfig] = useState<{ playlist: Ayah[]; startAyah: Ayah } | null>(null);
     const [isContinuousPlayActive, setIsContinuousPlayActive] = useState(false);
@@ -254,7 +256,7 @@ const QuranReaderPage: React.FC<QuranReaderPageProps> = ({ initialPage, highligh
                     setIsContinuousPlayActive(false);
                 }}
                 onBookmark={handleBookmark}
-                onTafsir={() => setIsTafsirOpen(true)}
+                onTafsir={(ayah) => setTafsirAyah(ayah)}
                 onShare={(ayah) => handleShare(`${ayah.text} (سورة ${ayah.surah.name}:${ayah.numberInSurah})`, 'آية من القرآن الكريم')}
             />
 
@@ -273,15 +275,7 @@ const QuranReaderPage: React.FC<QuranReaderPageProps> = ({ initialPage, highligh
                 />
             )}
             
-            {isTafsirOpen && (
-                 <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center" onClick={() => setIsTafsirOpen(false)}>
-                    <div className="bg-gray-800 rounded-lg p-6 w-11/12 max-w-md" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-xl font-bold text-green-400 mb-4">التفسير الميسر</h2>
-                        <p className="text-gray-300">ميزة التفسير ستكون متاحة قريباً إن شاء الله.</p>
-                        <button onClick={() => setIsTafsirOpen(false)} className="mt-4 w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition">إغلاق</button>
-                    </div>
-                 </div>
-            )}
+            {tafsirAyah && <TafsirModal ayah={tafsirAyah} onClose={() => setTafsirAyah(null)} />}
         </div>
     );
 };
@@ -379,6 +373,7 @@ const QuranPage: React.FC = () => {
     const debounceTimeout = useRef<number | null>(null);
 
     const [showCompletionModal, setShowCompletionModal] = useState(false);
+    const [isGoToModalOpen, setIsGoToModalOpen] = useState(false);
     
     const bookmarks = getBookmarks();
     
@@ -439,6 +434,10 @@ const QuranPage: React.FC = () => {
         }, 300);
     };
 
+    const handleNavigate = (page: number, ayahNumberOverall?: number) => {
+        openReaderAtPage(page, ayahNumberOverall);
+    };
+
     const TabButton = ({ id, label }: { id: Tab; label: string }) => (
         <button onClick={() => setActiveTab(id)} className={`py-3 px-4 font-semibold w-full transition-colors text-sm ${activeTab === id ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-400'}`}>
             {label}
@@ -450,7 +449,7 @@ const QuranPage: React.FC = () => {
             initialPage={view.page} 
             highlightAyahNum={view.highlightAyahNum} 
             khatmaSectionNumber={view.khatmaSectionNumber}
-            onBack={() => { setView({ mode: 'tabs' }); setActiveTab('khatma') }} 
+            onBack={() => setView({ mode: 'tabs' })} 
             onKhatmaSectionComplete={handleKhatmaSectionComplete}
         />;
     }
@@ -464,10 +463,22 @@ const QuranPage: React.FC = () => {
                     onClose={() => setShowCompletionModal(false)}
                 />
             )}
+            {isGoToModalOpen && (
+                <GoToModal 
+                    onClose={() => setIsGoToModalOpen(false)}
+                    onNavigate={handleNavigate}
+                    findPageForSurahAyah={findPageForSurahAyah}
+                />
+            )}
             <header className="bg-gray-800/90 backdrop-blur-sm sticky top-0 z-10 p-4 pb-0">
                 <div className="relative mb-4">
-                    <input type="text" placeholder="ابحث في السور أو في آيات القرآن..." className="w-full bg-gray-700 text-gray-200 rounded-full py-2.5 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-green-500 border border-gray-600 placeholder-gray-400" value={searchTerm} onChange={handleSearchChange} />
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><SearchIcon className="w-5 h-5" /></div>
+                    <input type="text" placeholder="ابحث في السور أو في آيات القرآن..." className="w-full bg-gray-700 text-gray-200 rounded-full py-2.5 px-4 pr-16 focus:outline-none focus:ring-2 focus:ring-green-500 border border-gray-600 placeholder-gray-400" value={searchTerm} onChange={handleSearchChange} />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 flex items-center space-x-2">
+                         <button onClick={() => setIsGoToModalOpen(true)} className="p-1 text-gray-300 hover:text-green-400" aria-label="Go to Ayah or Page">
+                            <MapPinIcon className="w-5 h-5" />
+                        </button>
+                        <SearchIcon className="w-5 h-5" />
+                    </div>
                 </div>
                 <div className="flex justify-around items-center border-b border-gray-700">
                     <TabButton id="bookmark" label="المحفوظات" />
