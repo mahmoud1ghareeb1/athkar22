@@ -42,7 +42,7 @@ const TafsirModal: React.FC<TafsirModalProps> = ({ ayah, onClose }) => {
             >
                 <div className="flex justify-between items-center p-4 border-b border-gray-700 sticky top-0 bg-gray-800">
                     <div>
-                        <h2 className="text-xl font-bold text-green-400">تفسير ابن كثير</h2>
+                        <h2 className="text-xl font-bold text-green-400">تفسير السعدي</h2>
                         <p className="text-sm text-gray-400">{`سورة ${ayah.surah.name} - الآية ${ayah.numberInSurah}`}</p>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-white">
@@ -54,10 +54,9 @@ const TafsirModal: React.FC<TafsirModalProps> = ({ ayah, onClose }) => {
                     {loading && <p className="text-center text-gray-400">جاري تحميل التفسير...</p>}
                     {error && <p className="text-center text-red-400">{error}</p>}
                     {tafsir && (
-                        <div 
-                            className="prose prose-invert text-gray-300 leading-loose text-right"
-                            dangerouslySetInnerHTML={{ __html: tafsir.text }} 
-                        />
+                       <p className="text-gray-300 leading-loose text-right whitespace-pre-wrap">
+                           {tafsir.text}
+                       </p>
                     )}
                 </div>
             </div>
