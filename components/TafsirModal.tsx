@@ -54,7 +54,9 @@ const TafsirModal: React.FC<TafsirModalProps> = ({ ayah, onClose }) => {
                     {loading && <p className="text-center text-gray-400">جاري تحميل التفسير...</p>}
                     {error && <p className="text-center text-red-400">{error}</p>}
                     {tafsir && (
-                       <p className="text-gray-300 leading-loose text-right whitespace-pre-wrap">
+                       <p
+                           className="text-gray-300 leading-loose text-right whitespace-pre-wrap"
+                       >
                            {tafsir.text}
                        </p>
                     )}
