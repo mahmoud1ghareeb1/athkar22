@@ -189,20 +189,19 @@ export const findPageForSurahAyah = (surahNumber: number, ayahInSurah: number): 
 };
 
 export const getTafsir = async (surahNumber: number, ayahNumberInSurah: number): Promise<Tafsir | null> => {
-    // Using local Tafsir Al-Sa'di data.
-    const tafsirPath = `./data/ar-tafseer-al-saddi/${surahNumber}/${ayahNumberInSurah}.json`;
-
     try {
-        const response = await fetch(tafsirPath);
+        // Fetch Tafsir Al-Sa'di from local data files
+        const response = await fetch(`./data/ar-tafseer-al-saddi/${surahNumber}/${ayahNumberInSurah}.json`);
         if (!response.ok) {
-            console.warn(`Tafsir not found for ${surahNumber}:${ayahNumberInSurah} at ${tafsirPath}. Status: ${response.status}`);
-            return null; // Return null on 404 or other errors
+            throw new Error(`Tafsir file not found for ${surahNumber}:${ayahNumberInSurah}`);
         }
         const data = await response.json();
-        // The local JSON has a 'text' property.
-        return { text: data.text };
+        if (data && typeof data.text === 'string') {
+            return { text: data.text };
+        }
+        return null;
     } catch (error) {
-        console.error("Error fetching local tafsir:", error);
+        console.error(`Failed to load Tafsir for ${surahNumber}:${ayahNumberInSurah}`, error);
         return null;
     }
 };
