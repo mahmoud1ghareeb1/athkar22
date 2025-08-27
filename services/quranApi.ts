@@ -1,7 +1,6 @@
 import type { QuranPageData, Ayah, Surah, Tafsir } from '../types';
 import { quranDataByPage } from '../data/quran-pages';
 import { surahList, juzs } from '../constants';
-import { tafsirIbnKathir } from '../data/tafsir-ibn-kathir';
 
 // --- Pre-computation for faster lookups ---
 
@@ -190,9 +189,20 @@ export const findPageForSurahAyah = (surahNumber: number, ayahInSurah: number): 
 };
 
 export const getTafsir = async (surahNumber: number, ayahNumberInSurah: number): Promise<Tafsir | null> => {
-    return new Promise((resolve) => {
-        const key = `${surahNumber}:${ayahNumberInSurah}`;
-        const tafsir = tafsirIbnKathir[key];
-        resolve(tafsir || null);
-    });
+    // Using local Tafsir Al-Sa'di data.
+    const tafsirPath = `./data/ar-tafseer-al-saddi/${surahNumber}/${ayahNumberInSurah}.json`;
+
+    try {
+        const response = await fetch(tafsirPath);
+        if (!response.ok) {
+            console.warn(`Tafsir not found for ${surahNumber}:${ayahNumberInSurah} at ${tafsirPath}. Status: ${response.status}`);
+            return null; // Return null on 404 or other errors
+        }
+        const data = await response.json();
+        // The local JSON has a 'text' property.
+        return { text: data.text };
+    } catch (error) {
+        console.error("Error fetching local tafsir:", error);
+        return null;
+    }
 };
