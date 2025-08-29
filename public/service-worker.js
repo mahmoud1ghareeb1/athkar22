@@ -107,6 +107,11 @@ self.addEventListener('fetch', (event) => {
     return staleWhileRevalidate(event, RUNTIME_CACHE);
   }
 
+  // Transparent textures background: SWR
+  if (url.hostname === 'www.transparenttextures.com') {
+    return staleWhileRevalidate(event, RUNTIME_CACHE);
+  }
+
   // Same-origin static assets: cache-first then update
   if (url.origin === self.location.origin) {
     event.respondWith(
