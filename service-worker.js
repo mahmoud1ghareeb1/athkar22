@@ -1,4 +1,4 @@
-const CACHE_NAME = 'athkari-v1';
+const CACHE_NAME = 'athkari-v2';
 const urlsToCache = [
   './',
   './index.html',
