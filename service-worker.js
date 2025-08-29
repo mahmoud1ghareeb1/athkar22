@@ -1,4 +1,4 @@
-const CACHE_NAME = 'athkari-v2';
+const CACHE_NAME = 'athkari-v3';
 const urlsToCache = [
   './',
   './index.html',
@@ -74,6 +74,8 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
+  // Activate updated SW immediately
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -138,6 +140,6 @@ self.addEventListener('activate', event => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
