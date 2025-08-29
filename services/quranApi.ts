@@ -192,8 +192,9 @@ export const getTafsir = async (surahNumber: number, ayahNumberInSurah: number):
     try {
         // Use Vite's import.meta.glob for dynamic, production-safe loading
         const tafsirFiles: Record<string, () => Promise<any>> = import.meta.glob('../data/ar-tafseer-al-saddi/*/*.json');
-        const key = `../data/ar-tafseer-al-saddi/${surahNumber}/${ayahNumberInSurah}.json`;
-        const loader = tafsirFiles[key];
+        const suffix = `/${surahNumber}/${ayahNumberInSurah}.json`;
+        const foundKey = Object.keys(tafsirFiles).find(k => k.endsWith(suffix));
+        const loader = foundKey ? tafsirFiles[foundKey] : undefined;
         if (!loader) {
             throw new Error(`Tafsir file not found for ${surahNumber}:${ayahNumberInSurah}`);
         }
