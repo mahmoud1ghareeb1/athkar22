@@ -57,26 +57,45 @@ function staleWhileRevalidate(event, cacheName = RUNTIME_CACHE) {
   );
 }
 
+function broadcastProgress(message) {
+  self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then((clients) => {
+    for (const client of clients) client.postMessage(message);
+  });
+}
+
 self.addEventListener('message', async (event) => {
   const data = event.data;
   if (!data || data.type !== 'cache-tafsir' || !Array.isArray(data.urls)) return;
   const urls = data.urls.filter(Boolean);
+  const total = urls.length;
+  let processed = 0;
   const cache = await caches.open(RUNTIME_CACHE);
-  const CHUNK = 100;
-  for (let i = 0; i < urls.length; i += CHUNK) {
-    const slice = urls.slice(i, i + CHUNK);
-    await Promise.allSettled(
-      slice.map(async (url) => {
-        try {
-          const already = await cache.match(url);
-          if (already) return;
-          const res = await fetch(url, { cache: 'no-cache' });
-          if (res && (res.ok || res.type === 'opaque')) {
-            await cache.put(url, res.clone());
+  const CHUNK = 50;
+  try {
+    for (let i = 0; i < urls.length; i += CHUNK) {
+      const slice = urls.slice(i, i + CHUNK);
+      const results = await Promise.allSettled(
+        slice.map(async (url) => {
+          try {
+            const already = await cache.match(url);
+            if (already) return true;
+            const res = await fetch(url, { cache: 'no-cache' });
+            if (res && (res.ok || res.type === 'opaque')) {
+              await cache.put(url, res.clone());
+              return true;
+            }
+            return false;
+          } catch {
+            return false;
           }
-        } catch {}
-      })
-    );
+        })
+      );
+      processed += results.length;
+      broadcastProgress({ type: 'cache-progress', processed, total });
+    }
+    broadcastProgress({ type: 'cache-complete', total });
+  } catch (e) {
+    broadcastProgress({ type: 'cache-error', message: (e && e.message) || 'unknown' });
   }
 });
 
