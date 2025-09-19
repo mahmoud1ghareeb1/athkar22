@@ -189,12 +189,28 @@ export const findPageForSurahAyah = (surahNumber: number, ayahInSurah: number): 
 };
 
 export const getTafsir = async (surahNumber: number, ayahNumberInSurah: number): Promise<Tafsir | null> => {
+    const suffix = `/${surahNumber}/${ayahNumberInSurah}.json`;
     try {
-        // Use Vite's import.meta.glob for dynamic, production-safe loading
+        // 1) Try direct fetch from URL map (works offline via SW cache)
+        try {
+            const { getTafsirUrlMap } = await import('../offline/tafsirIndex');
+            const map = getTafsirUrlMap();
+            const url = Object.entries(map).find(([k]) => k.endsWith(suffix))?.[1];
+            if (url) {
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = (await res.json()) as { text?: string };
+                    if (data && typeof data.text === 'string') {
+                        return { text: data.text };
+                    }
+                }
+            }
+        } catch {}
+
+        // 2) Fallback to dynamic import (dev or when not cached yet)
         const g1: Record<string, () => Promise<any>> = import.meta.glob('../data/ar-tafseer-al-saddi/*/*.json');
         const g2: Record<string, () => Promise<any>> = import.meta.glob('@/data/ar-tafseer-al-saddi/*/*.json');
         const tafsirFiles: Record<string, () => Promise<any>> = { ...g1, ...g2 };
-        const suffix = `/${surahNumber}/${ayahNumberInSurah}.json`;
         const foundKey = Object.keys(tafsirFiles).find(k => k.endsWith(suffix));
         const loader = foundKey ? tafsirFiles[foundKey] : undefined;
         if (!loader) {
