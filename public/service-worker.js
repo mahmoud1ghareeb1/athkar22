@@ -57,6 +57,29 @@ function staleWhileRevalidate(event, cacheName = RUNTIME_CACHE) {
   );
 }
 
+self.addEventListener('message', async (event) => {
+  const data = event.data;
+  if (!data || data.type !== 'cache-tafsir' || !Array.isArray(data.urls)) return;
+  const urls = data.urls.filter(Boolean);
+  const cache = await caches.open(RUNTIME_CACHE);
+  const CHUNK = 100;
+  for (let i = 0; i < urls.length; i += CHUNK) {
+    const slice = urls.slice(i, i + CHUNK);
+    await Promise.allSettled(
+      slice.map(async (url) => {
+        try {
+          const already = await cache.match(url);
+          if (already) return;
+          const res = await fetch(url, { cache: 'no-cache' });
+          if (res && (res.ok || res.type === 'opaque')) {
+            await cache.put(url, res.clone());
+          }
+        } catch {}
+      })
+    );
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
