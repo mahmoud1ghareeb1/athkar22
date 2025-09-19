@@ -43,5 +43,21 @@
         });
       }
     </script>
+    <script type="module">
+      import { getTafsirUrls } from './offline/tafsirManifest.ts';
+      if ('serviceWorker' in navigator) {
+        (async () => {
+          try {
+            const reg = await navigator.serviceWorker.ready;
+            const urls = getTafsirUrls();
+            if (reg && reg.active && Array.isArray(urls) && urls.length) {
+              reg.active.postMessage({ type: 'cache-tafsir', urls });
+            }
+          } catch (e) {
+            console.warn('SW pre-cache tafsir failed', e);
+          }
+        })();
+      }
+    </script>
   </body>
 </html>
