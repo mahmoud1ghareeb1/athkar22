@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="manifest" href="./manifest.json" />
-    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="https://cdn.builder.io/api/v1/image/assets%2F7841fc6e14cc4f5286519ee8641badef%2F96e3a0698a02468496453cc59d50515b?format=png&width=192" />
     <meta name="theme-color" content="#1f2937" />
     <style>
       body {
@@ -41,6 +41,22 @@
             console.log('ServiceWorker registration failed: ', err);
           });
         });
+      }
+    </script>
+    <script type="module">
+      import { getTafsirUrls } from './offline/tafsirManifest.ts';
+      if ('serviceWorker' in navigator) {
+        (async () => {
+          try {
+            const reg = await navigator.serviceWorker.ready;
+            const urls = getTafsirUrls();
+            if (reg && reg.active && Array.isArray(urls) && urls.length) {
+              reg.active.postMessage({ type: 'cache-tafsir', urls });
+            }
+          } catch (e) {
+            console.warn('SW pre-cache tafsir failed', e);
+          }
+        })();
       }
     </script>
   </body>

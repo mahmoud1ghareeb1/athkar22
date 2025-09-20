@@ -189,13 +189,35 @@ export const findPageForSurahAyah = (surahNumber: number, ayahInSurah: number): 
 };
 
 export const getTafsir = async (surahNumber: number, ayahNumberInSurah: number): Promise<Tafsir | null> => {
+    const suffix = `/${surahNumber}/${ayahNumberInSurah}.json`;
     try {
-        // Fetch Tafsir Al-Sa'di from local data files
-        const response = await fetch(`./data/ar-tafseer-al-saddi/${surahNumber}/${ayahNumberInSurah}.json`);
-        if (!response.ok) {
+        // 1) Try direct fetch from URL map (works offline via SW cache)
+        try {
+            const { getTafsirUrlMap } = await import('../offline/tafsirIndex');
+            const map = getTafsirUrlMap();
+            const url = Object.entries(map).find(([k]) => k.endsWith(suffix))?.[1];
+            if (url) {
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = (await res.json()) as { text?: string };
+                    if (data && typeof data.text === 'string') {
+                        return { text: data.text };
+                    }
+                }
+            }
+        } catch {}
+
+        // 2) Fallback to dynamic import (dev or when not cached yet)
+        const g1: Record<string, () => Promise<any>> = import.meta.glob('../data/ar-tafseer-al-saddi/*/*.json');
+        const g2: Record<string, () => Promise<any>> = import.meta.glob('@/data/ar-tafseer-al-saddi/*/*.json');
+        const tafsirFiles: Record<string, () => Promise<any>> = { ...g1, ...g2 };
+        const foundKey = Object.keys(tafsirFiles).find(k => k.endsWith(suffix));
+        const loader = foundKey ? tafsirFiles[foundKey] : undefined;
+        if (!loader) {
             throw new Error(`Tafsir file not found for ${surahNumber}:${ayahNumberInSurah}`);
         }
-        const data = await response.json();
+        const mod = await loader();
+        const data = (mod && (mod.default ?? mod)) as { text?: string };
         if (data && typeof data.text === 'string') {
             return { text: data.text };
         }
