@@ -50,7 +50,7 @@ const TafsirModal: React.FC<TafsirModalProps> = ({ ayah, onClose, onPrev, onNext
             </div>
 
             <div className="px-4 pt-4 pb-2 bg-gray-900 border-b border-gray-800" onClick={(e) => e.stopPropagation()}>
-                <p className="font-amiri-quran text-gray-100 text-xl leading-relaxed text-right">{ayah.text}</p>
+                <p className="font-amiri-quran text-gray-100 text-2xl leading-relaxed text-center">{ayah.text}</p>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 bg-gray-900" dir="rtl" onClick={(e) => e.stopPropagation()}>
