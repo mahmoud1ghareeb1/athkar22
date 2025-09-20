@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { surahList, juzs, khatmaGoals } from '../constants';
 import { getPage as fetchPageAPI, searchQuran as searchQuranAPI, findPageForSurahAyah } from '../services/quranApi';
@@ -18,6 +16,7 @@ import CompletionModal from '../components/CompletionModal';
 import AudioPlayer from '../components/AudioPlayer';
 import GoToModal from '../components/GoToModal';
 import TafsirModal from '../components/TafsirModal';
+import { getAyah } from '../services/quranApi';
 
 // --- Quran Reader Page Component ---
 interface QuranReaderPageProps {
@@ -472,7 +471,7 @@ const QuranPage: React.FC = () => {
             )}
             <header className="bg-gray-800/90 backdrop-blur-sm sticky top-0 z-10 p-4 pb-0">
                 <div className="relative mb-4">
-                    <input type="text" placeholder="ابحث في السور أو في آيات القرآن..." className="w-full bg-gray-700 text-gray-200 rounded-full py-2.5 px-4 pr-16 focus:outline-none focus:ring-2 focus:ring-green-500 border border-gray-600 placeholder-gray-400" value={searchTerm} onChange={handleSearchChange} />
+                    <input type="text" placeholder="ابحث في السور أو في ��يات القرآن..." className="w-full bg-gray-700 text-gray-200 rounded-full py-2.5 px-4 pr-16 focus:outline-none focus:ring-2 focus:ring-green-500 border border-gray-600 placeholder-gray-400" value={searchTerm} onChange={handleSearchChange} />
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 flex items-center space-x-2">
                          <button onClick={() => setIsGoToModalOpen(true)} className="p-1 text-gray-300 hover:text-green-400" aria-label="Go to Ayah or Page">
                             <MapPinIcon className="w-5 h-5" />
