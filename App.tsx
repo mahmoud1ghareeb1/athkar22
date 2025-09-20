@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import BottomNav from './components/BottomNav';
 import HomePage from './pages/HomePage';
@@ -20,6 +19,7 @@ import QuranicDuasPage from './pages/QuranicDuasPage';
 import IstighfarPage from './pages/IstighfarPage';
 import type { Page, Overlay } from './types';
 import Header from './components/Header';
+import InstallPrompt from './components/InstallPrompt';
 
 // --- Main App Component ---
 
