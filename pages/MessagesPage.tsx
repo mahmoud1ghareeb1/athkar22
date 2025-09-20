@@ -13,17 +13,22 @@ const MessagesPage: React.FC = () => {
 
   const load = async () => {
     setLoading(true); setError(null);
-    try { setItems(await fetchNotifications(filter)); } catch (e) { setError('تعذر تحميل الإشعارات'); }
+    try { setItems(await fetchNotifications(filter)); } catch (e) { setError('تعذر تحميل الإشعا��ات (تحقق من إعدادات Supabase)'); }
     setLoading(false);
   };
 
   useEffect(() => { load(); }, [filter]);
 
   useEffect(() => {
-    const unsub = subscribeNotifications((n) => {
-      setItems((prev) => [n, ...prev]);
-    });
-    return unsub;
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      try {
+        cleanup = await subscribeNotifications((n) => setItems((prev) => [n, ...prev]));
+      } catch (e) {
+        console.warn('Realtime disabled until Supabase config is set');
+      }
+    })();
+    return () => { if (cleanup) cleanup(); };
   }, []);
 
   const content = useMemo(() => {
