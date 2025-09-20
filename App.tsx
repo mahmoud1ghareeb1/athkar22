@@ -104,6 +104,7 @@ const App: React.FC = () => {
       </main>
       <BottomNav activePage={activePage} setActivePage={setActivePage} />
       {renderOverlay()}
+      <InstallPrompt />
     </div>
   );
 };
