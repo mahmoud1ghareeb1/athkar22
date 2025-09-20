@@ -14,6 +14,18 @@
       "type": "image/svg+xml",
       "sizes": "any",
       "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn.builder.io/api/v1/image/assets%2F7841fc6e14cc4f5286519ee8641badef%2F96e3a0698a02468496453cc59d50515b?format=png&width=192",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn.builder.io/api/v1/image/assets%2F7841fc6e14cc4f5286519ee8641badef%2F96e3a0698a02468496453cc59d50515b?format=png&width=512",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ]
 }
